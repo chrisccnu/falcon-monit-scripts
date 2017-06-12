@@ -1,21 +1,24 @@
 #!/bin/env python
 #-*- coding:utf-8 -*-
-
 __author__ = 'iambocai'
 
-import sys, urllib2, base64, json, time,socket
+import urllib2, base64, json, time,socket, ConfigParser
 
-
-step = 60
-ip = socket.gethostname()
+cp = ConfigParser.RawConfigParser()
+cp.read('rbmonitor.properties')
+endpoint = cp.get("rabbit", "endpoint")
+step = cp.getint("rabbit","step")
+user = cp.get("rabbit","user")
+password = cp.get("rabbit","password")
+ip = cp.get("rabbit","ip")
 ts = int(time.time())
 keys = ('messages_ready', 'messages_unacknowledged')
 rates = ('ack', 'deliver', 'deliver_get', 'publish')
 
 request = urllib2.Request("http://%s:15672/api/queues" %ip)
 # see #issue4
-base64string = base64.b64encode('guest:guest')
-request.add_header("Authorization", "Basic %s" % base64string)   
+base64string = base64.b64encode(user + ":" + password)
+request.add_header("Authorization", "Basic %s" % base64string)
 result = urllib2.urlopen(request)
 data = json.loads(result.read())
 tag = ''
@@ -27,7 +30,7 @@ for queue in data:
 	msg_total = 0
 	for key in keys:
 		q = {}
-		q["endpoint"] = ip
+		q["endpoint"] = endpoint
 		q['timestamp'] = ts
 		q['step'] = step
 		q['counterType'] = "GAUGE"
@@ -39,7 +42,7 @@ for queue in data:
 
 	# total
 	q = {}
-	q["endpoint"] = ip
+	q["endpoint"] = endpoint
 	q['timestamp'] = ts
 	q['step'] = step
 	q['counterType'] = "GAUGE"
@@ -47,11 +50,11 @@ for queue in data:
 	q['tags'] = 'name=%s,%s' % (queue['name'],tag)
 	q['value'] = msg_total
 	p.append(q)
-	
+
 	# rates
 	for rate in rates:
 		q = {}
-		q["endpoint"] = ip
+		q["endpoint"] = endpoint
 		q['timestamp'] = ts
 		q['step'] = step
 		q['counterType'] = "GAUGE"
@@ -69,7 +72,7 @@ print json.dumps(p, indent=4)
 method = "POST"
 handler = urllib2.HTTPHandler()
 opener = urllib2.build_opener(handler)
-url = 'http://127.0.0.1:1988/v1/push'
+url = cp.get("rabbit","push")
 request = urllib2.Request(url, data=json.dumps(p) )
 request.add_header("Content-Type",'application/json')
 request.get_method = lambda: method
