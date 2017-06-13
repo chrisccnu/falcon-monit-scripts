@@ -5,12 +5,13 @@ __author__ = 'iambocai'
 import urllib2, base64, json, time,socket, ConfigParser
 
 cp = ConfigParser.RawConfigParser()
-cp.read('rbmonitor.properties')
+cp.read('redis.properties')
 endpoint = cp.get("rabbit", "endpoint")
 step = cp.getint("rabbit","step")
 user = cp.get("rabbit","user")
 password = cp.get("rabbit","password")
 ip = cp.get("rabbit","ip")
+debug = cp.getboolean("redis","debug")
 ts = int(time.time())
 keys = ('messages_ready', 'messages_unacknowledged')
 rates = ('ack', 'deliver', 'deliver_get', 'publish')
@@ -65,9 +66,9 @@ for queue in data:
 		except:
 			q['value'] = 0
 		p.append(q)
-#print json.dumps(p, indent=4)
 
-
+if debug:
+    print json.dumps(p, indent=4)
 
 method = "POST"
 handler = urllib2.HTTPHandler()
@@ -82,5 +83,8 @@ except urllib2.HTTPError,e:
     connection = e
 
 # check. Substitute with appropriate HTTP code.
-if connection.code != 200:
+if connection.code == 200:
+    if debug:
+        print connection.read()
+else:
     print '{"err":1,"msg":"%s"}' % connection

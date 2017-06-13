@@ -1,8 +1,7 @@
 #!/bin/env python
 #-*- coding:utf-8 -*-
-
 __author__ = 'iambocai'
-
+import ConfigParser
 import json
 import time
 import socket
@@ -29,12 +28,18 @@ class RedisStats:
 
 
 def main():
-    ip = socket.gethostname()
+    cp = ConfigParser.RawConfigParser()
+    cp.read('redis.properties')
+    endpoint = cp.get("redis", "endpoint")
+    step = cp.getint("redis", "step")
+    conf_list = cp.get("redis","conf_list")
+    push = cp.get("redis","push")
+    debug = cp.getboolean("redis","debug")
+
     timestamp = int(time.time())
-    step = 60
     # inst_list中保存了redis配置文件列表，程序将从这些配置中读取port和password，建议使用动态发现的方法获得，如：
     # inst_list = [ i for i in commands.getoutput("find  /etc/ -name 'redis*.conf'" ).split('\n') ]
-    insts_list = [ '/etc/redis/redis.conf' ]
+    insts_list = conf_list.split(",")
     p = []
     
     monit_keys = [
@@ -56,7 +61,6 @@ def main():
         port = commands.getoutput("sed -n 's/^port *\([0-9]\{4,5\}\)/\\1/p' %s" % inst)
         passwd = commands.getoutput("sed -n 's/^requirepass *\([^ ]*\)/\\1/p' %s" % inst)
         metric = "redis"
-        endpoint = ip
         tags = 'port=%s' % port
 
         try:
@@ -84,7 +88,7 @@ def main():
                     value = int(stats[key])
                 except:
                     continue
-            
+
             i = {
                 'Metric': '%s.%s' % (metric, key),
                 'Endpoint': endpoint,
@@ -96,12 +100,13 @@ def main():
             }
             p.append(i)
         
+    if debug :
+        print json.dumps(p, sort_keys=True,indent=4)
 
-    print json.dumps(p, sort_keys=True,indent=4)
     method = "POST"
     handler = urllib2.HTTPHandler()
     opener = urllib2.build_opener(handler)
-    url = 'http://127.0.0.1:1988/v1/push'
+    url = push
     request = urllib2.Request(url, data=json.dumps(p) )
     request.add_header("Content-Type",'application/json')
     request.get_method = lambda: method
@@ -112,7 +117,8 @@ def main():
 
     # check. Substitute with appropriate HTTP code.
     if connection.code == 200:
-        print connection.read()
+        if debug:
+            print connection.read()
     else:
         print '{"err":1,"msg":"%s"}' % connection
 if __name__ == '__main__':
