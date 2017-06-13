@@ -65,8 +65,8 @@ for queue in data:
 		except:
 			q['value'] = 0
 		p.append(q)
+#print json.dumps(p, indent=4)
 
-print json.dumps(p, indent=4)
 
 
 method = "POST"
@@ -82,7 +82,5 @@ except urllib2.HTTPError,e:
     connection = e
 
 # check. Substitute with appropriate HTTP code.
-if connection.code == 200:
-    print connection.read()
-else:
+if connection.code != 200:
     print '{"err":1,"msg":"%s"}' % connection
