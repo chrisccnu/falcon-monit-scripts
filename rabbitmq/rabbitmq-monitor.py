@@ -22,7 +22,7 @@ base64string = base64.b64encode(user + ":" + password)
 request.add_header("Authorization", "Basic %s" % base64string)
 result = urllib2.urlopen(request)
 data = json.loads(result.read())
-tag = ''
+tag = cp.get("rabbit","tag")
 #tag = sys.argv[1].replace('_',',').replace('.','=')
 
 p = []
@@ -36,7 +36,10 @@ for queue in data:
 		q['step'] = step
 		q['counterType'] = "GAUGE"
 		q['metric'] = 'rabbitmq.%s' % key
-		q['tags'] = 'name=%s,%s' % (queue['name'],tag)
+		if tag :
+			q['tags'] = 'name=%s,%s' % (queue['name'],tag)
+		else:
+			q['tags'] = 'name=%s' % queue['name']
 		q['value'] = int(queue[key])
 		msg_total += q['value']
 		p.append(q)
