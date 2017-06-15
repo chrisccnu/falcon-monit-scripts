@@ -5,7 +5,7 @@ __author__ = 'iambocai'
 import urllib2, base64, json, time,socket, ConfigParser
 
 cp = ConfigParser.RawConfigParser()
-cp.read('redis.properties')
+cp.read('rbmonitor.properties')
 endpoint = cp.get("rabbit", "endpoint")
 step = cp.getint("rabbit","step")
 user = cp.get("rabbit","user")
